@@ -82,39 +82,6 @@ body {
   border: 1px solid #dbe2f1;
 }
 
-.message.typing {
-  font-style: italic;
-  color: #5f6b7c;
-  background: #eef2f7;
-}
-
-.toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-}
-
-.toolbar__hint {
-  margin: 0;
-  color: #5f6b7c;
-  font-size: 14px;
-}
-
-.toolbar__button {
-  border: 1px solid #ccd6eb;
-  background: white;
-  color: #102037;
-  padding: 8px 16px;
-  border-radius: 999px;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.toolbar__button:hover {
-  background: #f2f5fb;
-}
-
 .composer {
   display: grid;
   grid-template-columns: 1fr auto;

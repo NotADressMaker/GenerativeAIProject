@@ -6,7 +6,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from typing import Any, Dict, List
-from urllib import error, request
+from urllib import request
 
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -45,11 +45,10 @@ class ChatMemoryStore:
 
 
 class OpenAIChatClient:
-    def __init__(self, api_key: str, model: str, temperature: float, timeout: int) -> None:
+    def __init__(self, api_key: str, model: str, temperature: float) -> None:
         self.api_key = api_key
         self.model = model
         self.temperature = temperature
-        self.timeout = timeout
 
     def generate(self, messages: List[ChatMessage]) -> str:
         payload = {
@@ -66,7 +65,7 @@ class OpenAIChatClient:
                 "Content-Type": "application/json",
             },
         )
-        with request.urlopen(req, timeout=self.timeout) as resp:
+        with request.urlopen(req, timeout=30) as resp:
             body = json.loads(resp.read().decode("utf-8"))
         return body["choices"][0]["message"]["content"]
 
@@ -88,42 +87,20 @@ class ChatAgent:
         api_key = os.getenv("OPENAI_API_KEY", "").strip()
         model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
         temperature = float(os.getenv("OPENAI_TEMPERATURE", "0.7"))
-        timeout = int(os.getenv("OPENAI_TIMEOUT", "30"))
-        self.max_history = int(os.getenv("CHAT_HISTORY_LIMIT", "16"))
-        self.system_prompt = os.getenv(
-            "SYSTEM_PROMPT",
-            (
-                "You are a helpful, friendly AI assistant. "
-                "Answer clearly and concisely, and ask follow-up questions when helpful."
-            ),
-        )
         if api_key:
-            self.client: Any = OpenAIChatClient(api_key, model, temperature, timeout)
-            self.mode = "online"
+            self.client: Any = OpenAIChatClient(api_key, model, temperature)
         else:
             self.client = FallbackChatClient()
-            self.mode = "offline"
 
     def respond(self, session: ChatSession, user_message: str) -> str:
+        system_prompt = (
+            "You are a helpful, friendly AI assistant. "
+            "Answer clearly and concisely, and ask follow-up questions when helpful."
+        )
         if not session.messages or session.messages[0].role != "system":
-            session.messages.insert(0, ChatMessage(role="system", content=self.system_prompt))
+            session.messages.insert(0, ChatMessage(role="system", content=system_prompt))
         session.add("user", user_message)
-        history = session.messages[-self.max_history :]
-        try:
-            reply = self.client.generate(history)
-        except error.HTTPError as exc:
-            self.mode = "offline"
-            reply = (
-                "I couldn't reach the OpenAI API right now. "
-                "Double-check your API key and network, then try again."
-            )
-            session.add("assistant", reply)
-            return reply
-        except error.URLError:
-            self.mode = "offline"
-            reply = "The network seems unavailable right now. Please try again shortly."
-            session.add("assistant", reply)
-            return reply
+        reply = self.client.generate(session.messages)
         session.add("assistant", reply)
         return reply
 
@@ -145,18 +122,4 @@ def index(request: Request) -> HTMLResponse:
 def chat(message: str = Form(...), session_id: str | None = Form(None)) -> JSONResponse:
     session = store.get_or_create(session_id)
     reply = agent.respond(session, message)
-    return JSONResponse(
-        {"session_id": session.session_id, "reply": reply, "mode": agent.mode}
-    )
-
-
-@app.get("/status")
-def status() -> JSONResponse:
-    return JSONResponse({"mode": agent.mode})
-
-
-@app.post("/reset")
-def reset(session_id: str | None = Form(None)) -> JSONResponse:
-    session = store.get_or_create(session_id)
-    session.messages.clear()
-    return JSONResponse({"session_id": session.session_id, "message": "Session cleared."})
+    return JSONResponse({"session_id": session.session_id, "reply": reply})
