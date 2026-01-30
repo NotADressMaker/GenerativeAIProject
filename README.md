@@ -1,7 +1,7 @@
 # AgentScript Language Studio
 
-AgentScript Language Studio turns the project into a programming language workbench for designing
-optimal generative AI agents. It provides a chat-based IDE to sketch AgentScript programs, reason
+AgentScript Language Studio turns the project into a programming language workbench for building
+generative AI agents. It provides a chat-based IDE to sketch AgentScript programs, reason
 about agent architectures, and iterate on orchestration strategies.
 
 ## Features
