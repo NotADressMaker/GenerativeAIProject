@@ -45,12 +45,19 @@ composer.addEventListener("submit", async (event) => {
       method: "POST",
       body: formData,
     });
+    if (!response.ok) {
+      throw new Error("Request failed");
+    }
     const data = await response.json();
     if (data.session_id) {
       localStorage.setItem(sessionIdKey, data.session_id);
     }
     appendMessage("assistant", data.reply);
-    setStatus("Connected", true);
+    if (data.mode === "openai") {
+      setStatus("Connected", true);
+    } else {
+      setStatus("Offline mode", false);
+    }
   } catch (error) {
     appendMessage(
       "assistant",
