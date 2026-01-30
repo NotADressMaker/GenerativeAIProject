@@ -1,11 +1,13 @@
-# Generative AI Agent
+# AgentScript Language Studio
 
-This project is a lightweight ChatGPT-style assistant with a web UI. It stores short-term memory per session and can connect to the OpenAI API when you provide an API key.
+AgentScript Language Studio turns the project into a programming language workbench for designing
+optimal generative AI agents. It provides a chat-based IDE to sketch AgentScript programs, reason
+about agent architectures, and iterate on orchestration strategies.
 
 ## Features
-- Simple chat UI with session-based memory.
-- Offline fallback responses when no API key is configured.
-- Pluggable OpenAI client using the Chat Completions API.
+- Chat-based AgentScript editor with session-based memory.
+- Offline fallback guidance for drafting agent programs without an API key.
+- Pluggable OpenAI client using the Chat Completions API for language execution assistance.
 
 ## Setup
 ```bash

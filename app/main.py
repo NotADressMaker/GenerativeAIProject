@@ -159,10 +159,13 @@ class FallbackChatClient:
     def generate(self, messages: List[ChatMessage]) -> str:
         last_user = next((m for m in reversed(messages) if m.role == "user"), None)
         if not last_user:
-            return "Tell me what you'd like help with, and I'll do my best to assist."
+            return (
+                "Ask me about the AgentScript language and I'll help you design an agent."
+            )
         return (
             "I'm running in offline mode. "
             "Set OPENAI_API_KEY to connect to the OpenAI API. "
+            "I'll still help you sketch AgentScript programs here. "
             f"You said: {last_user.content}"
         )
 
@@ -195,8 +198,10 @@ class ChatAgent:
 
     def respond(self, session: ChatSession, user_message: str) -> tuple[str, str]:
         system_prompt = (
-            "You are a helpful, friendly AI assistant. "
-            "Answer clearly and concisely, and ask follow-up questions when helpful."
+            "You are the AgentScript language guide and compiler. "
+            "Help users design optimal generative AI agents by explaining syntax, "
+            "program structure, and best practices. Provide concise examples, "
+            "suggest improvements, and ask clarifying questions when needed."
         )
         if not session.messages or session.messages[0].role != "system":
             session.messages.insert(0, ChatMessage(role="system", content=system_prompt))

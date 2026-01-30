@@ -21,7 +21,7 @@ function setStatus(text, active) {
 
 appendMessage(
   "assistant",
-  "Hi! I'm your generative AI agent. Ask me anything and I'll help out."
+  "Welcome to AgentScript. Tell me the agent you want to build and I'll draft the program."
 );
 
 composer.addEventListener("submit", async (event) => {
