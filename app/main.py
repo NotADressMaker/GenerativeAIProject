@@ -7,6 +7,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Dict, List
 from urllib import request
+from urllib.error import HTTPError, URLError
 
 from fastapi import FastAPI, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -26,22 +27,47 @@ class ChatMessage:
 @dataclass
 class ChatSession:
     session_id: str
+    max_messages: int
     messages: List[ChatMessage] = field(default_factory=list)
 
     def add(self, role: str, content: str) -> None:
         self.messages.append(ChatMessage(role=role, content=content))
+        self._trim_messages()
+
+    def _trim_messages(self) -> None:
+        if self.max_messages <= 0 or len(self.messages) <= self.max_messages:
+            return
+        system_message = None
+        start_idx = 0
+        if self.messages and self.messages[0].role == "system":
+            system_message = self.messages[0]
+            start_idx = 1
+        remaining = self.messages[start_idx:]
+        keep_count = self.max_messages - (1 if system_message else 0)
+        if keep_count <= 0:
+            self.messages = [system_message] if system_message else []
+            return
+        self.messages = ([system_message] if system_message else []) + remaining[-keep_count:]
 
 
 class ChatMemoryStore:
-    def __init__(self) -> None:
+    def __init__(self, max_messages: int) -> None:
         self._sessions: Dict[str, ChatSession] = {}
+        self._max_messages = max_messages
 
     def get_or_create(self, session_id: str | None) -> ChatSession:
         if not session_id:
             session_id = uuid.uuid4().hex
         if session_id not in self._sessions:
-            self._sessions[session_id] = ChatSession(session_id=session_id)
+            self._sessions[session_id] = ChatSession(
+                session_id=session_id,
+                max_messages=self._max_messages,
+            )
         return self._sessions[session_id]
+
+
+class OpenAIChatError(RuntimeError):
+    pass
 
 
 class OpenAIChatClient:
@@ -65,8 +91,13 @@ class OpenAIChatClient:
                 "Content-Type": "application/json",
             },
         )
-        with request.urlopen(req, timeout=30) as resp:
-            body = json.loads(resp.read().decode("utf-8"))
+        try:
+            with request.urlopen(req, timeout=30) as resp:
+                body = json.loads(resp.read().decode("utf-8"))
+        except (HTTPError, URLError, TimeoutError) as exc:
+            raise OpenAIChatError("OpenAI request failed") from exc
+        if "error" in body:
+            raise OpenAIChatError(body["error"].get("message", "OpenAI error response"))
         return body["choices"][0]["message"]["content"]
 
 
@@ -147,6 +178,7 @@ class ChatAgent:
         ]
         synthesis_model = os.getenv("OPENAI_SYNTHESIS_MODEL", "").strip() or None
         temperature = float(os.getenv("OPENAI_TEMPERATURE", "0.7"))
+        self.fallback_client = FallbackChatClient()
         if api_key:
             if multi_models:
                 models = multi_models if multi_models else [model]
@@ -159,9 +191,9 @@ class ChatAgent:
             else:
                 self.client = OpenAIChatClient(api_key, model, temperature)
         else:
-            self.client = FallbackChatClient()
+            self.client = self.fallback_client
 
-    def respond(self, session: ChatSession, user_message: str) -> str:
+    def respond(self, session: ChatSession, user_message: str) -> tuple[str, str]:
         system_prompt = (
             "You are a helpful, friendly AI assistant. "
             "Answer clearly and concisely, and ask follow-up questions when helpful."
@@ -169,16 +201,22 @@ class ChatAgent:
         if not session.messages or session.messages[0].role != "system":
             session.messages.insert(0, ChatMessage(role="system", content=system_prompt))
         session.add("user", user_message)
-        reply = self.client.generate(session.messages)
+        try:
+            reply = self.client.generate(session.messages)
+            mode = "offline" if self.client is self.fallback_client else "openai"
+        except OpenAIChatError:
+            reply = self.fallback_client.generate(session.messages)
+            mode = "offline"
         session.add("assistant", reply)
-        return reply
+        return reply, mode
 
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
 templates = Jinja2Templates(directory="app/templates")
-store = ChatMemoryStore()
+max_messages = int(os.getenv("CHAT_MAX_MESSAGES", "20"))
+store = ChatMemoryStore(max_messages=max_messages)
 agent = ChatAgent()
 
 
@@ -190,5 +228,7 @@ def index(request: Request) -> HTMLResponse:
 @app.post("/chat")
 def chat(message: str = Form(...), session_id: str | None = Form(None)) -> JSONResponse:
     session = store.get_or_create(session_id)
-    reply = agent.respond(session, message)
-    return JSONResponse({"session_id": session.session_id, "reply": reply})
+    reply, mode = agent.respond(session, message)
+    return JSONResponse(
+        {"session_id": session.session_id, "reply": reply, "mode": mode}
+    )
