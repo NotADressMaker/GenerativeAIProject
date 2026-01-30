@@ -70,6 +70,60 @@ class OpenAIChatClient:
         return body["choices"][0]["message"]["content"]
 
 
+class MultiModelChatClient:
+    def __init__(
+        self,
+        api_key: str,
+        models: List[str],
+        temperature: float,
+        synthesis_model: str | None,
+    ) -> None:
+        self.clients = [OpenAIChatClient(api_key, model, temperature) for model in models]
+        self.model_names = models
+        self.synthesis_client = OpenAIChatClient(
+            api_key,
+            synthesis_model or models[0],
+            temperature,
+        )
+
+    @staticmethod
+    def _format_transcript(messages: List[ChatMessage]) -> str:
+        lines = []
+        for message in messages:
+            role = message.role.capitalize()
+            lines.append(f"{role}: {message.content}")
+        return "\n".join(lines)
+
+    def generate(self, messages: List[ChatMessage]) -> str:
+        model_outputs = []
+        for model_name, client in zip(self.model_names, self.clients):
+            response = client.generate(messages)
+            model_outputs.append((model_name, response))
+
+        transcript = self._format_transcript(messages)
+        synthesis_prompt = (
+            "You are an expert AI orchestrator. Combine the model responses into a single, "
+            "clear, and accurate answer. Preserve important details, resolve conflicts, and "
+            "avoid mentioning that multiple models were used."
+        )
+        synthesis_messages = [
+            ChatMessage(role="system", content=synthesis_prompt),
+            ChatMessage(
+                role="user",
+                content=(
+                    f"Conversation so far:\n{transcript}\n\n"
+                    "Model responses:\n"
+                    + "\n\n".join(
+                        f"{model_name}:\n{response}"
+                        for model_name, response in model_outputs
+                    )
+                    + "\n\nProvide the best possible final response."
+                ),
+            ),
+        ]
+        return self.synthesis_client.generate(synthesis_messages)
+
+
 class FallbackChatClient:
     def generate(self, messages: List[ChatMessage]) -> str:
         last_user = next((m for m in reversed(messages) if m.role == "user"), None)
@@ -86,9 +140,24 @@ class ChatAgent:
     def __init__(self) -> None:
         api_key = os.getenv("OPENAI_API_KEY", "").strip()
         model = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+        multi_models = [
+            item.strip()
+            for item in os.getenv("OPENAI_MULTI_MODELS", "").split(",")
+            if item.strip()
+        ]
+        synthesis_model = os.getenv("OPENAI_SYNTHESIS_MODEL", "").strip() or None
         temperature = float(os.getenv("OPENAI_TEMPERATURE", "0.7"))
         if api_key:
-            self.client: Any = OpenAIChatClient(api_key, model, temperature)
+            if multi_models:
+                models = multi_models if multi_models else [model]
+                self.client = MultiModelChatClient(
+                    api_key,
+                    models,
+                    temperature,
+                    synthesis_model,
+                )
+            else:
+                self.client = OpenAIChatClient(api_key, model, temperature)
         else:
             self.client = FallbackChatClient()
 
