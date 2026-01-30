@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Generative AI Agent</title>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="app__header">
+        <div>
+          <p class="app__eyebrow">Your personal AI companion</p>
+          <h1>Generative AI Agent</h1>
+        </div>
+        <div class="app__status" id="status">Offline mode</div>
+      </header>
+
+      <section class="chat" id="chat"></section>
+
+      <form class="composer" id="composer">
+        <input
+          type="text"
+          id="message"
+          name="message"
+          placeholder="Ask anything..."
+          autocomplete="off"
+          required
+        />
+        <button type="submit">Send</button>
+      </form>
+      <p class="footnote">
+        Tip: set <code>OPENAI_API_KEY</code> to connect this agent to the OpenAI API.
+      </p>
+    </main>
+    <script src="/static/app.js"></script>
+  </body>
+</html>
