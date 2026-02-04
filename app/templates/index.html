@@ -13,20 +13,38 @@
           <p class="app__eyebrow">A programming language to build generative AI agents</p>
           <h1>AgentScript Language Studio</h1>
         </div>
-        <div class="app__status" id="status">Offline mode</div>
+        <div class="app__actions">
+          <div class="app__status" id="status">Offline mode</div>
+          <button class="ghost-button" id="clear-chat" type="button">Clear chat</button>
+        </div>
       </header>
 
       <section class="chat" id="chat"></section>
 
+      <section class="prompt-hints">
+        <p class="prompt-hints__title">Quick starts</p>
+        <div class="prompt-hints__list">
+          <button type="button" class="hint" data-prompt="Design an agent that summarizes support tickets and suggests tags.">
+            Support ticket triage
+          </button>
+          <button type="button" class="hint" data-prompt="Draft an AgentScript that monitors new product reviews and alerts the PM.">
+            Review monitor
+          </button>
+          <button type="button" class="hint" data-prompt="Create a multi-step agent that plans a blog post and drafts an outline.">
+            Blog outline planner
+          </button>
+        </div>
+      </section>
+
       <form class="composer" id="composer">
-        <input
-          type="text"
+        <textarea
           id="message"
           name="message"
           placeholder="Describe an agent to build..."
           autocomplete="off"
+          rows="2"
           required
-        />
+        ></textarea>
         <button type="submit">Send</button>
       </form>
       <p class="footnote">
