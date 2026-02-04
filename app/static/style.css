@@ -32,6 +32,7 @@ body {
   justify-content: space-between;
   align-items: center;
   gap: 16px;
+  flex-wrap: wrap;
 }
 
 .app__eyebrow {
@@ -42,12 +43,33 @@ body {
   margin: 0 0 6px;
 }
 
+.app__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .app__status {
   background: #fef2c0;
   color: #7a5b00;
   padding: 8px 16px;
   border-radius: 999px;
   font-size: 14px;
+}
+
+.ghost-button {
+  border: 1px solid #ccd6eb;
+  background: transparent;
+  color: #2f3f57;
+  padding: 8px 14px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.ghost-button:hover {
+  border-color: #2f6fed;
+  color: #2f6fed;
 }
 
 .chat {
@@ -82,17 +104,52 @@ body {
   border: 1px solid #dbe2f1;
 }
 
+.prompt-hints {
+  display: grid;
+  gap: 12px;
+}
+
+.prompt-hints__title {
+  margin: 0;
+  font-weight: 600;
+  color: #2f3f57;
+}
+
+.prompt-hints__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.hint {
+  border: 1px solid #dbe2f1;
+  background: white;
+  padding: 8px 12px;
+  border-radius: 999px;
+  color: #2f3f57;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.hint:hover {
+  border-color: #2f6fed;
+  color: #2f6fed;
+}
+
 .composer {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 12px;
 }
 
-.composer input {
+.composer textarea {
   padding: 14px 16px;
   border-radius: 12px;
   border: 1px solid #ccd6eb;
   font-size: 16px;
+  resize: vertical;
+  min-height: 54px;
+  font-family: inherit;
 }
 
 .composer button {

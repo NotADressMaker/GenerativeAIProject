@@ -65,6 +65,9 @@ class ChatMemoryStore:
             )
         return self._sessions[session_id]
 
+    def clear(self, session_id: str) -> None:
+        self._sessions.pop(session_id, None)
+
 
 class OpenAIChatError(RuntimeError):
     pass
@@ -237,3 +240,9 @@ def chat(message: str = Form(...), session_id: str | None = Form(None)) -> JSONR
     return JSONResponse(
         {"session_id": session.session_id, "reply": reply, "mode": mode}
     )
+
+
+@app.post("/chat/clear")
+def clear_chat(session_id: str = Form(...)) -> JSONResponse:
+    store.clear(session_id)
+    return JSONResponse({"cleared": True})
